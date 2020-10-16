@@ -10,7 +10,8 @@
 #include <stdio.h>
 
 int                     get_line(char *ret, FILE *infile);
-void                    put_in_file(const char *filepath, const char *str);
-int                     is_in_file(const char *filepath, const char *str);
+int                     get_line_tab(char **tab, unsigned int max, FILE *infile);
+void                    write_tab_to_file(const char *outpath, char **tab);
+void                    add_tab_if_not_in_file(const char *outpath, char **tab);
 
 #endif //PURGE_DUPES_FILE_H

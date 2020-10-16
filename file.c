@@ -9,6 +9,94 @@
 #include "stdlib.h"
 #include "string.h"
 
+static int              tablen(char **tab)
+{
+    int                 i;
+
+    i = 0;
+    while (tab[i])
+    {
+        ++i;
+    }
+    return i;
+}
+
+static void             remove_line_from_tab(char **tab, const char *line)
+{
+    unsigned int        i;
+    int                 max;
+
+    max = -1;
+    i = 0;
+    while (tab[i])
+    {
+        if (!strcmp(tab[i], line))
+        {
+            if (max == -1)
+            {
+                max = tablen(tab);
+            }
+            tab[i] = tab[max - 1];
+            tab[max - 1] = NULL;
+            --max;
+        }
+        else
+        {
+            ++i;
+        }
+    }
+}
+
+static void             remove_tab_if_in_file(const char *outpath, char **tab)
+{
+    char                compline[LINE_MAX_LEN];
+    FILE                *outfile;
+
+    if (!(outfile = fopen(outpath, "rb")))
+    {
+        fprintf(stderr, "Unable to open file: %s\n", outpath);
+        exit(1);
+    }
+    while (!get_line(compline, outfile))
+    {
+        remove_line_from_tab(tab, compline);
+    }
+    fclose(outfile);
+}
+
+void                    add_tab_if_not_in_file(const char *outpath, char **tab)
+{
+    unsigned int        i;
+
+    i = 0;
+    while (tab[i] && tab[i + 1])
+    {
+        remove_line_from_tab(&tab[i + 1], tab[i]);
+        ++i;
+    }
+    remove_tab_if_in_file(outpath, tab);
+    write_tab_to_file(outpath, tab);
+}
+
+void                    write_tab_to_file(const char *outpath, char **tab)
+{
+    unsigned int        i;
+    FILE                *outfile;
+
+    if (!(outfile = fopen(outpath, "a")))
+    {
+        fprintf(stderr, "Unable to open file: %s\n", outpath);
+        exit(1);
+    }
+    i = 0;
+    while (tab[i])
+    {
+        fwrite(tab[i], 1, strlen(tab[i]), outfile);
+        ++i;
+    }
+    fclose(outfile);
+}
+
 int                     get_line(char *ret, FILE *infile)
 {
     int                 i;
@@ -34,38 +122,15 @@ int                     get_line(char *ret, FILE *infile)
     return i == 0;
 }
 
-void                    put_in_file(const char *filepath, const char *str)
+int                     get_line_tab(char **tab, unsigned int max, FILE *infile)
 {
-    FILE                *file;
+    unsigned int        i;
 
-    if (!(file = fopen(filepath, "ab")))
+    i = 0;
+    while (i < max && !get_line(tab[i], infile))
     {
-        fprintf(stderr, "Failed to open: %s\n", filepath);
-        exit(1);
+        ++i;
     }
-    fwrite(str, 1, strlen(str), file);
-    fwrite("\n", 1, 1, file);
-    fclose(file);
-}
-
-int                     is_in_file(const char *filepath, const char *str)
-{
-    FILE                *file;
-    char                buff[LINE_MAX_LEN];
-
-    if (!(file = fopen(filepath, "rb")))
-    {
-        fprintf(stderr, "Failed to open: %s\n", filepath);
-        exit(1);
-    }
-    while (!get_line(buff, file))
-    {
-        if (!strcmp(buff, str))
-        {
-            fclose(file);
-            return 1;
-        }
-    }
-    fclose(file);
-    return 0;
+    tab[i] = NULL;
+    return i == 0;
 }

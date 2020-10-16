@@ -2,24 +2,41 @@
 #include "headers/const.h"
 #include "headers/file.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-int                     purge(FILE *infile, const char *outpath)
+static void             init_tab(char ***tab)
 {
-    char                line[LINE_MAX_LEN];
+    unsigned int        i;
 
-    fclose(fopen(outpath, "w+"));
-    while (TRUE)
+    i = 0;
+    if (!(*tab = malloc(sizeof(char *) * MAX_LINE_PER_READ + 1)))
     {
-        if (get_line(line, infile))
-        {
-            fclose(infile);
-            return 0;
-        }
-        if (!is_in_file(outpath, line))
-        {
-            put_in_file(outpath, line);
-        }
+        fprintf(stderr, "Memory allocation failed\n");
+        exit(1);
     }
+    while (i < MAX_LINE_PER_READ)
+    {
+        if (!(tab[0][i] = malloc(sizeof(char) * LINE_MAX_LEN + 1)))
+        {
+            fprintf(stderr, "Memory allocation failed\n");
+            exit(1);
+        }
+        ++i;
+    }
+}
+
+static void             purge(FILE *infile, const char *outpath)
+{
+    char                **lines;
+
+    init_tab(&lines);
+    fclose(fopen(outpath, "w+"));
+    while (!get_line_tab(lines, MAX_LINE_PER_READ, infile))
+    {
+        add_tab_if_not_in_file(outpath, lines);
+    }
+    fclose(infile);
 }
 
 int                     main(int ac, char **av)
@@ -34,7 +51,8 @@ int                     main(int ac, char **av)
     if (!(file = fopen(av[1], "rb")))
     {
         fprintf(stderr, "Unable to open file: %s\n", av[1]);
-        return -1;
+        return 1;
     }
-    return purge(file, av[2]);
+    purge(file, av[2]);
+    return 0;
 }
